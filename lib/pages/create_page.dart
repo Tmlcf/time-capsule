@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:time_capsule/services/capsule_service.dart';
 
 class CreatePage extends StatefulWidget {
   const CreatePage({super.key});
@@ -10,6 +11,8 @@ class CreatePage extends StatefulWidget {
 class _CreatePageState extends State<CreatePage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+
+  final CapsuleService _capsuleService = CapsuleService();
 
   DateTime? _openDate;
 
@@ -35,14 +38,42 @@ class _CreatePageState extends State<CreatePage> {
     }
   }
 
-  void _createCapsule() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('สร้าง Time Capsule สำเร็จ 🎉'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
-      ),
-    );
+  Future<void> _createCapsule() async {
+    if (_titleController.text.trim().isEmpty ||
+        _messageController.text.trim().isEmpty ||
+        _openDate == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบ')));
+      return;
+    }
+
+    try {
+      await _capsuleService.createCapsule(
+        title: _titleController.text.trim(),
+        message: _messageController.text.trim(),
+        openDate: _openDate!,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('สร้าง Time Capsule สำเร็จ 🎉')),
+      );
+
+      _titleController.clear();
+      _messageController.clear();
+
+      setState(() {
+        _openDate = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
+    }
   }
 
   @override
@@ -63,18 +94,23 @@ class _CreatePageState extends State<CreatePage> {
               'สร้าง Time Capsule ⏳',
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 8),
+
             Text(
               'เขียนบางอย่างที่คุณอยากส่งไปยังอนาคต',
               style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
             ),
+
             const SizedBox(height: 28),
 
             const Text(
               'ชื่อ Capsule',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 8),
+
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -91,7 +127,9 @@ class _CreatePageState extends State<CreatePage> {
               'ข้อความ',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 8),
+
             TextField(
               controller: _messageController,
               maxLines: 7,
@@ -110,7 +148,9 @@ class _CreatePageState extends State<CreatePage> {
               'วันที่เปิด Capsule',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 8),
+
             InkWell(
               onTap: _selectDate,
               borderRadius: BorderRadius.circular(14),
