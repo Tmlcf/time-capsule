@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CapsuleService {
@@ -41,5 +42,21 @@ class CapsuleService {
         .update({'is_opened': true})
         .eq('id', capsuleId)
         .eq('user_id', user.id);
+  }
+
+  Future<void> deleteCapsule(String capsuleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('ยังไม่ได้เข้าสู่ระบบ');
+
+    debugPrint('🗑️ Deleting capsule: $capsuleId');
+    debugPrint('👤 Current user: ${user.id}');
+
+    await _supabase
+        .from('capsules')
+        .delete()
+        .eq('id', capsuleId)
+        .eq('user_id', user.id);
+
+    debugPrint('✅ Delete request sent successfully');
   }
 }

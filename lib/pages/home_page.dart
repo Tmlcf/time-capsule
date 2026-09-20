@@ -26,6 +26,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  bool _isUnlocked(Capsule capsule) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final openDate = DateTime(
+      capsule.openDate.year,
+      capsule.openDate.month,
+      capsule.openDate.day,
+    );
+    return today.isAtSameMomentAs(openDate) || today.isAfter(openDate);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,11 +51,7 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              setState(() {
-                _fetchCapsules();
-              });
-            },
+            onPressed: () => setState(() => _fetchCapsules()),
             icon: const Icon(Icons.refresh),
           ),
           IconButton(
@@ -52,31 +63,56 @@ class _HomePageState extends State<HomePage> {
       body: FutureBuilder<List<Capsule>>(
         future: _capsulesFuture,
         builder: (context, snapshot) {
+          // ─── Loading ───
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          // ─── Error ───
           if (snapshot.hasError) {
-            return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_off_outlined, size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'ไม่สามารถโหลดข้อมูล Capsule ได้',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'ลองใหม่อีกครั้ง',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => setState(() => _fetchCapsules()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('ลองใหม่'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
+          // ─── Data ───
           final capsules = snapshot.data ?? [];
-          final now = DateTime.now();
-          final today = DateTime(now.year, now.month, now.day);
-
-          int total = capsules.length;
-          int unlocked = capsules.where((c) {
-            final openDate = DateTime(c.openDate.year, c.openDate.month, c.openDate.day);
-            return today.isAtSameMomentAs(openDate) || today.isAfter(openDate);
-          }).length;
-          int locked = total - unlocked;
-
-          Capsule? latestCapsule = capsules.isNotEmpty ? capsules.first : null;
+          final int total = capsules.length;
+          final int unlocked = capsules.where(_isUnlocked).length;
+          final int locked = total - unlocked;
+          final Capsule? latestCapsule = capsules.isNotEmpty ? capsules.first : null;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ─── Greeting ───
                 const Text(
                   'สวัสดี 👋',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -88,18 +124,28 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Stats Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatCard('ทั้งหมด', total.toString(), Colors.blue),
-                    _buildStatCard('Locked', locked.toString(), Colors.grey),
-                    _buildStatCard('Unlocked', unlocked.toString(), Colors.green),
-                  ],
+                // ─── Stats Card ───
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatCard('ทั้งหมด', total, Colors.blue),
+                      _buildDivider(),
+                      _buildStatCard('🔒 Locked', locked, Colors.grey.shade700),
+                      _buildDivider(),
+                      _buildStatCard('🔓 Unlocked', unlocked, Colors.green),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Create Capsule
+                // ─── Create Banner ───
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -125,9 +171,7 @@ class _HomePageState extends State<HomePage> {
                       ElevatedButton(
                         onPressed: () async {
                           await context.push('/create');
-                          setState(() {
-                            _fetchCapsules();
-                          });
+                          setState(() => _fetchCapsules());
                         },
                         child: const Text('สร้าง Capsule'),
                       ),
@@ -136,6 +180,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 28),
 
+                // ─── Latest Capsule ───
                 const Text(
                   'Latest Capsule',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -143,6 +188,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 12),
 
                 if (latestCapsule == null)
+                  // ─── Empty State ───
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(30),
@@ -152,14 +198,10 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 50,
-                          color: Colors.grey.shade500,
-                        ),
+                        Icon(Icons.inventory_2_outlined, size: 50, color: Colors.grey.shade500),
                         const SizedBox(height: 12),
                         Text(
-                          'ยังไม่มี Capsule',
+                          'ยังไม่มี Time Capsule',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -168,7 +210,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'สร้าง Capsule แรกของคุณเพื่อเริ่มเก็บความทรงจำ',
+                          'สร้างข้อความถึงอนาคตของคุณดู ⏳',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
@@ -176,40 +218,47 @@ class _HomePageState extends State<HomePage> {
                     ),
                   )
                 else
+                  // ─── Latest Capsule Card ───
                   Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 2,
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
-                      leading: Icon(
-                        (today.isAtSameMomentAs(DateTime(latestCapsule.openDate.year, latestCapsule.openDate.month, latestCapsule.openDate.day)) || 
-                         today.isAfter(DateTime(latestCapsule.openDate.year, latestCapsule.openDate.month, latestCapsule.openDate.day)))
-                            ? Icons.lock_open
-                            : Icons.lock,
-                        size: 40,
-                        color: (today.isAtSameMomentAs(DateTime(latestCapsule.openDate.year, latestCapsule.openDate.month, latestCapsule.openDate.day)) || 
-                                today.isAfter(DateTime(latestCapsule.openDate.year, latestCapsule.openDate.month, latestCapsule.openDate.day)))
-                            ? Colors.green
-                            : Colors.grey,
+                      leading: CircleAvatar(
+                        backgroundColor: _isUnlocked(latestCapsule)
+                            ? Colors.green.shade100
+                            : Colors.grey.shade200,
+                        child: Icon(
+                          _isUnlocked(latestCapsule) ? Icons.lock_open : Icons.lock,
+                          color: _isUnlocked(latestCapsule) ? Colors.green : Colors.grey.shade700,
+                        ),
                       ),
                       title: Text(
                         latestCapsule.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                       ),
-                      subtitle: Text(
-                        'เปิดวันที่ ${latestCapsule.openDate.day.toString().padLeft(2, '0')}/${latestCapsule.openDate.month.toString().padLeft(2, '0')}/${latestCapsule.openDate.year}\n${((today.isAtSameMomentAs(DateTime(latestCapsule.openDate.year, latestCapsule.openDate.month, latestCapsule.openDate.day)) || 
-                          today.isAfter(DateTime(latestCapsule.openDate.year, latestCapsule.openDate.month, latestCapsule.openDate.day)))
-                            ? '🔓 Unlocked'
-                            : '🔒 Locked')}',
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('เปิดวันที่ ${_formatDate(latestCapsule.openDate)}'),
+                            const SizedBox(height: 4),
+                            Text(
+                              _isUnlocked(latestCapsule) ? '🔓 Unlocked' : '🔒 Locked',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _isUnlocked(latestCapsule) ? Colors.green : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       isThreeLine: true,
+                      trailing: const Icon(Icons.chevron_right),
                       onTap: () async {
                         await context.push('/capsules/detail', extra: latestCapsule);
-                        setState(() {
-                          _fetchCapsules();
-                        });
+                        setState(() => _fetchCapsules());
                       },
                     ),
                   ),
@@ -221,18 +270,20 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildStatCard(String title, String count, Color color) {
+  Widget _buildStatCard(String title, int count, Color color) {
     return Column(
       children: [
         Text(
-          count,
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
+          count.toString(),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: color),
         ),
-        Text(
-          title,
-          style: TextStyle(color: Colors.grey.shade700),
-        ),
+        const SizedBox(height: 4),
+        Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
       ],
     );
+  }
+
+  Widget _buildDivider() {
+    return Container(height: 40, width: 1, color: Colors.grey.shade300);
   }
 }
