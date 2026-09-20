@@ -11,6 +11,8 @@ import 'package:time_capsule/pages/map_page.dart';
 import 'package:time_capsule/pages/capsules_page.dart';
 import 'package:time_capsule/pages/profile_page.dart';
 import 'package:time_capsule/pages/settings_page.dart';
+import 'package:time_capsule/pages/capsule_detail_page.dart';
+import 'package:time_capsule/models/capsule.dart';
 import 'package:time_capsule/widgets/scaffold_with_nav_bar.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -129,6 +131,15 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/capsules',
               builder: (context, state) => const CapsulesPage(),
+              routes: [
+                GoRoute(
+                  path: 'detail',
+                  builder: (context, state) {
+                    final capsule = state.extra as Capsule;
+                    return CapsuleDetailPage(capsule: capsule);
+                  },
+                ),
+              ],
             ),
           ],
         ),
