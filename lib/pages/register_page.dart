@@ -3,29 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:time_capsule/providers/auth_provider.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureConfirm = true;
   String? _errorMessage;
+  bool _registrationSuccess = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -35,12 +39,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.signIn(
+      final response = await authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      if (mounted) {
+
+      if (!mounted) return;
+
+      if (response.session != null) {
+        // มี session ทันที → ไป home ได้เลย (email confirmation ปิดอยู่)
         context.go('/home');
+      } else {
+        // Supabase ส่ง confirmation email → แจ้งให้ไปเช็ค email
+        setState(() => _registrationSuccess = true);
       }
     } catch (e) {
       setState(() {
@@ -54,12 +65,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   String _parseError(String error) {
-    if (error.contains('Invalid login credentials') ||
-        error.contains('invalid_credentials')) {
-      return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+    if (error.contains('User already registered') ||
+        error.contains('already been registered')) {
+      return 'อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น';
     }
-    if (error.contains('Email not confirmed')) {
-      return 'กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ';
+    if (error.contains('Password should be at least')) {
+      return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+    }
+    if (error.contains('invalid') && error.contains('email')) {
+      return 'รูปแบบอีเมลไม่ถูกต้อง';
     }
     if (error.contains('network') || error.contains('SocketException')) {
       return 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต';
@@ -75,36 +89,92 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // ============ หน้าแจ้งให้ยืนยัน email ============
+    if (_registrationSuccess) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child:
+                        Icon(Icons.mark_email_read_outlined,
+                            size: 40, color: Colors.green.shade600),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'ตรวจสอบอีเมลของคุณ!',
+                    style: textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'เราได้ส่งอีเมลยืนยันบัญชีไปที่\n${_emailController.text.trim()}\n\nกรุณาคลิกลิงก์ในอีเมลเพื่อยืนยันบัญชีก่อนเข้าสู่ระบบ',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
+                        height: 1.6),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/login'),
+                      child: const Text('กลับไปหน้าเข้าสู่ระบบ'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ============ หน้า Register Form ============
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('สมัครสมาชิก'),
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ============ Icon ============
+                  // ============ Title ============
                   Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.1),
+                      color: colorScheme.secondary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: Icon(
-                      Icons.hourglass_bottom_rounded,
-                      size: 34,
-                      color: colorScheme.primary,
-                    ),
+                    child: Icon(Icons.person_add_outlined,
+                        size: 34, color: colorScheme.secondary),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
-                  // ============ Title ============
                   Text(
-                    'ยินดีต้อนรับกลับ',
+                    'สร้างบัญชีใหม่',
                     style: textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -113,13 +183,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 6),
 
                   Text(
-                    'เข้าสู่ระบบเพื่อดู Time Capsule ของคุณ',
+                    'เริ่มเก็บความทรงจำของคุณใน Time Capsule',
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
 
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 32),
 
                   // ============ Email ============
                   TextFormField(
@@ -132,8 +202,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       hintText: 'example@email.com',
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'กรุณากรอกอีเมล';
@@ -150,26 +219,59 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _login(),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: 'รหัสผ่าน',
+                      hintText: 'อย่างน้อย 6 ตัวอักษร',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined),
                         onPressed: () =>
                             setState(() => _obscurePassword = !_obscurePassword),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'กรุณากรอกรหัสผ่าน';
+                      if (v.length < 6) {
+                        return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ============ Confirm Password ============
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirm,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _register(),
+                    decoration: InputDecoration(
+                      labelText: 'ยืนยันรหัสผ่าน',
+                      hintText: 'กรอกรหัสผ่านอีกครั้ง',
+                      prefixIcon: const Icon(Icons.lock_person_outlined),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscureConfirm
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined),
+                        onPressed: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
+                      ),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'กรุณายืนยันรหัสผ่าน';
+                      }
+                      if (v != _passwordController.text) {
+                        return 'รหัสผ่านไม่ตรงกัน';
+                      }
                       return null;
                     },
                   ),
@@ -205,11 +307,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   const SizedBox(height: 24),
 
-                  // ============ Login Button ============
+                  // ============ Register Button ============
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
+                      onPressed: _isLoading ? null : _register,
                       child: _isLoading
                           ? const SizedBox(
                               height: 20,
@@ -218,7 +320,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   strokeWidth: 2.5, color: Colors.white),
                             )
                           : const Text(
-                              'เข้าสู่ระบบ',
+                              'สมัครสมาชิก',
                               style: TextStyle(
                                   fontSize: 16, fontWeight: FontWeight.w600),
                             ),
@@ -227,19 +329,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  // ============ Register Link ============
+                  // ============ Login Link ============
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'ยังไม่มีบัญชี? ',
+                        'มีบัญชีอยู่แล้ว? ',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.7)),
                       ),
                       TextButton(
-                        onPressed: () => context.push('/register'),
+                        onPressed: () => context.pop(),
                         child: const Text(
-                          'สมัครสมาชิก',
+                          'เข้าสู่ระบบ',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
