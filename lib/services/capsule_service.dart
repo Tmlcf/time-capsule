@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CapsuleService {
@@ -8,7 +9,11 @@ class CapsuleService {
     required String message,
     required DateTime openDate,
   }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('ยังไม่ได้เข้าสู่ระบบ');
+
     await _supabase.from('capsules').insert({
+      'user_id': user.id,
       'title': title,
       'message': message,
       'open_date': openDate.toIso8601String().split('T').first,
@@ -16,11 +21,42 @@ class CapsuleService {
   }
 
   Future<List<Map<String, dynamic>>> getCapsules() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('ยังไม่ได้เข้าสู่ระบบ');
+
     final response = await _supabase
         .from('capsules')
         .select()
+        .eq('user_id', user.id)
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> markAsOpened(String capsuleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('ยังไม่ได้เข้าสู่ระบบ');
+
+    await _supabase
+        .from('capsules')
+        .update({'is_opened': true})
+        .eq('id', capsuleId)
+        .eq('user_id', user.id);
+  }
+
+  Future<void> deleteCapsule(String capsuleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('ยังไม่ได้เข้าสู่ระบบ');
+
+    debugPrint('🗑️ Deleting capsule: $capsuleId');
+    debugPrint('👤 Current user: ${user.id}');
+
+    await _supabase
+        .from('capsules')
+        .delete()
+        .eq('id', capsuleId)
+        .eq('user_id', user.id);
+
+    debugPrint('✅ Delete request sent successfully');
   }
 }
