@@ -21,9 +21,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _fetchCapsules() {
-    _capsulesFuture = _capsuleService.getCapsules().then(
-      (data) => data.map((e) => Capsule.fromMap(e)).toList(),
-    );
+    _capsulesFuture = _capsuleService.getCapsules();
   }
 
   bool _isUnlocked(Capsule capsule) {
