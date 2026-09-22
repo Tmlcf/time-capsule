@@ -5,6 +5,7 @@ import 'package:time_capsule/services/capsule_service.dart';
 
 class CapsuleDetailPage extends StatefulWidget {
   final Capsule capsule;
+
   const CapsuleDetailPage({super.key, required this.capsule});
 
   @override
@@ -13,8 +14,17 @@ class CapsuleDetailPage extends StatefulWidget {
 
 class _CapsuleDetailPageState extends State<CapsuleDetailPage> {
   final CapsuleService _capsuleService = CapsuleService();
+
   bool _isUnlocked = false;
   bool _isDeleting = false;
+
+  static const Color _background = Color(0xFF0B0B1E);
+  static const Color _surface = Color(0xFF15152B);
+  static const Color _surfaceLight = Color(0xFF1D1D38);
+  static const Color _purple = Color(0xFF651FFF);
+  static const Color _purpleLight = Color(0xFF9D7CFF);
+  static const Color _textPrimary = Colors.white;
+  static const Color _textSecondary = Color(0xFFA8A7C0);
 
   @override
   void initState() {
@@ -24,7 +34,9 @@ class _CapsuleDetailPageState extends State<CapsuleDetailPage> {
 
   void _checkUnlockStatus() {
     final now = DateTime.now();
+
     final today = DateTime(now.year, now.month, now.day);
+
     final openDate = DateTime(
       widget.capsule.openDate.year,
       widget.capsule.openDate.month,
@@ -49,16 +61,24 @@ class _CapsuleDetailPageState extends State<CapsuleDetailPage> {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
   }
 
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('ลบ Time Capsule?'),
+        backgroundColor: _surface,
+        title: const Text(
+          'ลบ Time Capsule?',
+          style: TextStyle(color: _textPrimary),
+        ),
         content: const Text(
-          'คุณแน่ใจหรือไม่ว่าต้องการลบ Capsule นี้?\nการลบไม่สามารถย้อนกลับได้',
+          'คุณแน่ใจหรือไม่ว่าต้องการลบ Capsule นี้?\n'
+          'การลบไม่สามารถย้อนกลับได้',
+          style: TextStyle(color: _textSecondary),
         ),
         actions: [
           TextButton(
@@ -67,7 +87,7 @@ class _CapsuleDetailPageState extends State<CapsuleDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
             child: const Text('ลบ'),
           ),
         ],
@@ -75,259 +95,664 @@ class _CapsuleDetailPageState extends State<CapsuleDetailPage> {
     );
 
     if (confirmed != true) return;
+
     await _deleteCapsule();
   }
 
   Future<void> _deleteCapsule() async {
-    setState(() => _isDeleting = true);
+    setState(() {
+      _isDeleting = true;
+    });
+
     try {
       await _capsuleService.deleteCapsule(widget.capsule.id);
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ลบ Capsule สำเร็จ ✅')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ลบ Capsule สำเร็จ ✅')));
+
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ลบไม่สำเร็จ: $e')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ลบไม่สำเร็จ: $e')));
     } finally {
-      if (mounted) setState(() => _isDeleting = false);
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('Capsule Detail'),
+        backgroundColor: _background,
+        foregroundColor: _textPrimary,
+        elevation: 0,
+        title: const Text(
+          'Capsule Detail',
+          style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary),
+        ),
         actions: [
-          // ─── Delete Button ───
-          _isDeleting
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'ลบ Capsule',
-                  onPressed: _confirmDelete,
+          if (_isDeleting)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _purpleLight,
                 ),
+              ),
+            )
+          else
+            IconButton(
+              tooltip: 'ลบ Capsule',
+              onPressed: _confirmDelete,
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.redAccent,
+              ),
+            ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 36),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ─── Lock Icon ───
-            Icon(
-              _isUnlocked ? Icons.lock_open : Icons.lock,
-              size: 80,
-              color: _isUnlocked ? Colors.green : Colors.grey,
+            _StatusHero(
+              isUnlocked: _isUnlocked,
+              openDate: _formatDate(widget.capsule.openDate),
             ),
-            const SizedBox(height: 16),
-            Text(
-              _isUnlocked ? '🔓 Capsule Unlocked' : '🔒 Capsule Locked',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: _isUnlocked ? Colors.green : Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 32),
 
-            // ─── Title ───
-            Text(
-              widget.capsule.title,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // ─── Date ───
-            Text(
-              _isUnlocked
-                  ? 'เปิดเมื่อ ${_formatDate(widget.capsule.openDate)}'
-                  : 'เปิดได้วันที่\n${_formatDate(widget.capsule.openDate)}',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-              textAlign: TextAlign.center,
+            _TitleSection(
+              title: widget.capsule.title,
+              hasMood: widget.capsule.hasMood,
+              mood: widget.capsule.mood,
+              hasRecipient: widget.capsule.hasRecipient,
+              recipientEmail: widget.capsule.recipientEmail,
             ),
-            const SizedBox(height: 16),
-            
-            // ─── Mood & Recipient ───
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                if (widget.capsule.hasMood)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.amber.shade200),
-                    ),
-                    child: Text(
-                      widget.capsule.mood!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.amber.shade900,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                if (widget.capsule.hasRecipient)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.send_outlined, size: 16, color: Colors.blue.shade700),
-                        const SizedBox(width: 6),
-                        Text(
-                          'ส่งถึง: ${widget.capsule.recipientEmail}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 24),
 
-            // ─── Message or Locked message ───
+            const SizedBox(height: 20),
+
             if (_isUnlocked)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ข้อความ:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.capsule.message,
-                      style: const TextStyle(fontSize: 18, height: 1.5),
-                    ),
-                    if (widget.capsule.hasImage) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        'รูปภาพแนบ:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade700,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          widget.capsule.imageUrl!,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              height: 200,
-                              color: Colors.grey.shade100,
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            height: 120,
-                            color: Colors.grey.shade100,
-                            child: const Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.broken_image_outlined, color: Colors.grey),
-                                  SizedBox(height: 4),
-                                  Text('ไม่สามารถโหลดรูปภาพได้',
-                                      style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              )
+              _UnlockedContent(capsule: widget.capsule)
             else
-              Column(
-                children: [
-                  Text(
-                    '⏳ ยังไม่ถึงเวลา',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'อดใจรออีกนิดนะ',
-                    style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
+              const _LockedContent(),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 28),
 
-            // ─── Delete Button (bottom) ───
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _isDeleting ? null : _confirmDelete,
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: const Text(
-                  'ลบ Capsule นี้',
-                  style: TextStyle(color: Colors.red),
-                ),
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('ลบ Capsule นี้'),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  foregroundColor: Colors.redAccent,
+                  side: BorderSide(
+                    color: Colors.redAccent.withValues(alpha: 0.55),
+                  ),
+                  backgroundColor: Colors.redAccent.withValues(alpha: 0.05),
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Status Hero
+// ================================================================
+
+class _StatusHero extends StatelessWidget {
+  final bool isUnlocked;
+  final String openDate;
+
+  const _StatusHero({required this.isUnlocked, required this.openDate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _CapsuleDetailPageState._purple.withValues(alpha: 0.35),
+            _CapsuleDetailPageState._surface,
+            _CapsuleDetailPageState._surface,
+          ],
+        ),
+        border: Border.all(
+          color: _CapsuleDetailPageState._purple.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _CapsuleDetailPageState._purple.withValues(alpha: 0.12),
+            blurRadius: 30,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isUnlocked
+                  ? Colors.greenAccent.withValues(alpha: 0.12)
+                  : _CapsuleDetailPageState._purple.withValues(alpha: 0.14),
+              border: Border.all(
+                color: isUnlocked
+                    ? Colors.greenAccent.withValues(alpha: 0.35)
+                    : _CapsuleDetailPageState._purpleLight.withValues(
+                        alpha: 0.35,
+                      ),
+              ),
+            ),
+            child: Icon(
+              isUnlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
+              size: 42,
+              color: isUnlocked
+                  ? Colors.greenAccent
+                  : _CapsuleDetailPageState._purpleLight,
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          Text(
+            isUnlocked ? 'Capsule Unlocked' : 'Capsule Locked',
+            style: const TextStyle(
+              color: _CapsuleDetailPageState._textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            isUnlocked
+                ? 'ความทรงจำนี้เปิดให้คุณแล้ว'
+                : 'ความทรงจำนี้ยังถูกเก็บไว้อย่างปลอดภัย',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: _CapsuleDetailPageState._textSecondary,
+              fontSize: 14,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 15,
+                  color: _CapsuleDetailPageState._purpleLight,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  isUnlocked
+                      ? 'เปิดเมื่อ $openDate'
+                      : 'เปิดได้วันที่ $openDate',
+                  style: const TextStyle(
+                    color: _CapsuleDetailPageState._textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Title Section
+// ================================================================
+
+class _TitleSection extends StatelessWidget {
+  final String title;
+  final bool hasMood;
+  final String? mood;
+  final bool hasRecipient;
+  final String? recipientEmail;
+
+  const _TitleSection({
+    required this.title,
+    required this.hasMood,
+    required this.mood,
+    required this.hasRecipient,
+    required this.recipientEmail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: _CapsuleDetailPageState._surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _CapsuleDetailPageState._purple.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _CapsuleDetailPageState._purple.withValues(
+                    alpha: 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: _CapsuleDetailPageState._purpleLight,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: _CapsuleDetailPageState._textPrimary,
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (hasMood || hasRecipient) ...[
+            const SizedBox(height: 18),
+
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (hasMood)
+                  _InfoChip(
+                    icon: Icons.mood_outlined,
+                    label: mood!,
+                    color: Colors.amberAccent,
+                  ),
+                if (hasRecipient)
+                  _InfoChip(
+                    icon: Icons.send_outlined,
+                    label: 'ส่งถึง: $recipientEmail',
+                    color: _CapsuleDetailPageState._purpleLight,
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Info Chip
+// ================================================================
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 320),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Unlocked Content
+// ================================================================
+
+class _UnlockedContent extends StatelessWidget {
+  final Capsule capsule;
+
+  const _UnlockedContent({required this.capsule});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _MessageCard(message: capsule.message),
+
+        if (capsule.hasImage) ...[
+          const SizedBox(height: 16),
+          _ImageCard(imageUrl: capsule.imageUrl!),
+        ],
+      ],
+    );
+  }
+}
+
+// ================================================================
+// Message Card
+// ================================================================
+
+class _MessageCard extends StatelessWidget {
+  final String message;
+
+  const _MessageCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: _CapsuleDetailPageState._surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _CapsuleDetailPageState._purple.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _CapsuleDetailPageState._purple.withValues(
+                    alpha: 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.mail_outline_rounded,
+                  color: _CapsuleDetailPageState._purpleLight,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'ข้อความจากอดีต',
+                style: TextStyle(
+                  color: _CapsuleDetailPageState._textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _CapsuleDetailPageState._surfaceLight,
+              borderRadius: BorderRadius.circular(16),
+              border: Border(
+                left: BorderSide(
+                  color: _CapsuleDetailPageState._purple,
+                  width: 3,
+                ),
+              ),
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: _CapsuleDetailPageState._textPrimary,
+                fontSize: 16,
+                height: 1.7,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Image Card
+// ================================================================
+
+class _ImageCard extends StatelessWidget {
+  final String imageUrl;
+
+  const _ImageCard({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _CapsuleDetailPageState._surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _CapsuleDetailPageState._purple.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(6, 4, 6, 12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.image_outlined,
+                  color: _CapsuleDetailPageState._purpleLight,
+                  size: 21,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'รูปภาพแนบ',
+                  style: TextStyle(
+                    color: _CapsuleDetailPageState._textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Image.network(
+              imageUrl,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  return child;
+                }
+
+                return Container(
+                  height: 220,
+                  color: _CapsuleDetailPageState._surfaceLight,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: _CapsuleDetailPageState._purpleLight,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 180,
+                  width: double.infinity,
+                  color: _CapsuleDetailPageState._surfaceLight,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.broken_image_outlined,
+                        size: 42,
+                        color: _CapsuleDetailPageState._textSecondary,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'ไม่สามารถโหลดรูปภาพได้',
+                        style: TextStyle(
+                          color: _CapsuleDetailPageState._textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Locked Content
+// ================================================================
+
+class _LockedContent extends StatelessWidget {
+  const _LockedContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 38),
+      decoration: BoxDecoration(
+        color: _CapsuleDetailPageState._surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _CapsuleDetailPageState._purple.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _CapsuleDetailPageState._purple.withValues(alpha: 0.10),
+              border: Border.all(
+                color: _CapsuleDetailPageState._purple.withValues(alpha: 0.25),
+              ),
+            ),
+            child: const Icon(
+              Icons.hourglass_empty_rounded,
+              size: 40,
+              color: _CapsuleDetailPageState._purpleLight,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          const Text(
+            '⏳ ยังไม่ถึงเวลา',
+            style: TextStyle(
+              color: _CapsuleDetailPageState._textPrimary,
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          const Text(
+            'อดใจรออีกนิดนะ\nความทรงจำนี้ยังถูกล็อกอยู่',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _CapsuleDetailPageState._textSecondary,
+              fontSize: 14,
+              height: 1.6,
+            ),
+          ),
+        ],
       ),
     );
   }
