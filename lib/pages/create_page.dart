@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:time_capsule/services/capsule_service.dart';
@@ -24,6 +25,13 @@ class _CreatePageState extends State<CreatePage> {
   String? _selectedImageName;
   bool _isLoading = false;
 
+  static const Color _background = Color(0xFF0B0B1E);
+  static const Color _surface = Color(0xFF15152B);
+  static const Color _purple = Color(0xFF651FFF);
+  static const Color _purpleLight = Color(0xFF9D7CFF);
+  static const Color _textPrimary = Colors.white;
+  static const Color _textSecondary = Color(0xFFA8A7C0);
+
   static const List<Map<String, String>> _moodOptions = [
     {'emoji': '😊', 'label': 'Happy'},
     {'emoji': '🥰', 'label': 'Love'},
@@ -48,7 +56,21 @@ class _CreatePageState extends State<CreatePage> {
       initialDate: DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: _purple,
+              onPrimary: Colors.white,
+              surface: _surface,
+              onSurface: _textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
+
     if (picked != null) {
       setState(() => _openDate = picked);
     }
@@ -62,8 +84,10 @@ class _CreatePageState extends State<CreatePage> {
         maxHeight: 1920,
         imageQuality: 85,
       );
+
       if (image != null) {
         final bytes = await image.readAsBytes();
+
         setState(() {
           _selectedImageBytes = bytes;
           _selectedImageName = image.name;
@@ -71,9 +95,10 @@ class _CreatePageState extends State<CreatePage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ไม่สามารถเลือกรูปได้: $e')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ไม่สามารถเลือกรูปได้: $e')));
     }
   }
 
@@ -96,7 +121,9 @@ class _CreatePageState extends State<CreatePage> {
 
     if (title.isEmpty || message.isEmpty || _openDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบ (ชื่อ, ข้อความ, วันที่เปิด)')),
+        const SnackBar(
+          content: Text('กรุณากรอกข้อมูลให้ครบ (ชื่อ, ข้อความ, วันที่เปิด)'),
+        ),
       );
       return;
     }
@@ -127,12 +154,12 @@ class _CreatePageState extends State<CreatePage> {
           ? 'สร้าง Time Capsule สำเร็จ 🎉'
           : 'ส่ง Capsule ถึง $recipientEmail สำเร็จ 📦';
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
       _titleController.clear();
       _messageController.clear();
       _recipientController.clear();
+
       setState(() {
         _openDate = null;
         _selectedMood = null;
@@ -142,193 +169,286 @@ class _CreatePageState extends State<CreatePage> {
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
+      backgroundColor: _background,
       appBar: AppBar(
+        backgroundColor: _background,
+        foregroundColor: _textPrimary,
+        elevation: 0,
         title: const Text(
           'Create Capsule',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'สร้าง Time Capsule ⏳',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'เขียนบางอย่างที่คุณอยากส่งไปยังอนาคต',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-            ),
-            const SizedBox(height: 28),
-
-            // 1. Title
-            const Text('ชื่อ Capsule',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                hintText: 'เช่น ถึงฉันในอีก 1 ปี',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14)),
+            // ======================================================
+            // Header
+            // ======================================================
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_purple.withValues(alpha: 0.30), _surface, _surface],
+                ),
+                border: Border.all(color: _purple.withValues(alpha: 0.25)),
+                boxShadow: [
+                  BoxShadow(
+                    color: _purple.withValues(alpha: 0.10),
+                    blurRadius: 30,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  _HeaderIcon(),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'สร้าง Time Capsule ⏳',
+                          style: TextStyle(
+                            color: _textPrimary,
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 7),
+                        Text(
+                          'เขียนบางอย่างที่คุณอยากส่งไปยังอนาคต',
+                          style: TextStyle(
+                            color: _textSecondary,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
 
-            // 2. Message
-            const Text('ข้อความ',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _messageController,
-              maxLines: 7,
-              decoration: InputDecoration(
-                hintText: 'เขียนข้อความถึงตัวคุณในอนาคต...',
-                alignLabelWithHint: true,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14)),
+            const SizedBox(height: 24),
+
+            // ======================================================
+            // Basic Information
+            // ======================================================
+            const _SectionTitle(
+              icon: Icons.edit_note_rounded,
+              title: 'ข้อมูล Capsule',
+            ),
+
+            const SizedBox(height: 12),
+
+            _FieldContainer(
+              child: TextField(
+                controller: _titleController,
+                style: const TextStyle(color: _textPrimary),
+                decoration: _inputDecoration(
+                  hintText: 'เช่น ถึงฉันในอีก 1 ปี',
+                  prefixIcon: Icons.title_rounded,
+                ),
               ),
             ),
+
+            const SizedBox(height: 14),
+
+            _FieldContainer(
+              child: TextField(
+                controller: _messageController,
+                maxLines: 7,
+                style: const TextStyle(color: _textPrimary, height: 1.5),
+                decoration: _inputDecoration(
+                  hintText: 'เขียนข้อความถึงตัวคุณในอนาคต...',
+                  prefixIcon: Icons.message_outlined,
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ),
+
             const SizedBox(height: 20),
 
-            // 3. Open date
-            const Text('วันที่เปิด Capsule',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            // ======================================================
+            // Open Date
+            // ======================================================
+            const _SectionTitle(
+              icon: Icons.calendar_month_outlined,
+              title: 'วันที่เปิด Capsule',
+            ),
+
+            const SizedBox(height: 12),
+
             InkWell(
               onTap: _selectDate,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(17),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(14),
+                  color: _surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _openDate == null
+                        ? Colors.white.withValues(alpha: 0.10)
+                        : _purple.withValues(alpha: 0.55),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_month_outlined),
-                    const SizedBox(width: 12),
-                    Text(
-                      _openDate == null
-                          ? 'เลือกวันที่ต้องการเปิด'
-                          : '${_openDate!.day}/${_openDate!.month}/${_openDate!.year}',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: _openDate == null
-                            ? Colors.grey.shade600
-                            : theme.colorScheme.onSurface,
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: _purple.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(13),
                       ),
+                      child: const Icon(
+                        Icons.calendar_today_rounded,
+                        color: _purpleLight,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _openDate == null
+                                ? 'เลือกวันที่ต้องการเปิด'
+                                : 'วันที่เปิด Capsule',
+                            style: const TextStyle(
+                              color: _textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _openDate == null
+                                ? 'แตะเพื่อเลือกวันที่'
+                                : '${_openDate!.day.toString().padLeft(2, '0')}/'
+                                      '${_openDate!.month.toString().padLeft(2, '0')}/'
+                                      '${_openDate!.year}',
+                            style: TextStyle(
+                              color: _openDate == null
+                                  ? _textSecondary
+                                  : _textPrimary,
+                              fontSize: 15,
+                              fontWeight: _openDate == null
+                                  ? FontWeight.normal
+                                  : FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _textSecondary,
                     ),
                   ],
                 ),
               ),
             ),
+
             const SizedBox(height: 24),
 
-            // 4. Recipient (Friend Capsule)
-            Row(
-              children: [
-                const Text('ส่งให้เพื่อน (Friend Capsule)',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'ไม่บังคับ',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.blue.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+            // ======================================================
+            // Friend Capsule
+            // ======================================================
+            const _SectionTitle(
+              icon: Icons.people_outline_rounded,
+              title: 'Friend Capsule',
+              optional: true,
             ),
-            const SizedBox(height: 6),
-            Text(
-              'กรอก email ของเพื่อน — ถ้าต้องการส่งให้ตัวเอง ให้เว้นว่างไว้',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
+
             const SizedBox(height: 8),
-            TextField(
-              controller: _recipientController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'friend@example.com',
-                prefixIcon: const Icon(Icons.person_outline),
-                suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _recipientController,
-                  builder: (context, value, child) {
-                    if (value.text.isEmpty) return const SizedBox.shrink();
-                    return IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () => _recipientController.clear(),
-                    );
-                  },
+
+            const Text(
+              'กรอก email ของเพื่อนเพื่อส่ง Capsule ให้โดยตรง',
+              style: TextStyle(color: _textSecondary, fontSize: 13),
+            ),
+
+            const SizedBox(height: 12),
+
+            _FieldContainer(
+              child: TextField(
+                controller: _recipientController,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: _textPrimary),
+                decoration: _inputDecoration(
+                  hintText: 'friend@example.com',
+                  prefixIcon: Icons.person_outline_rounded,
+                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _recipientController,
+                    builder: (context, value, child) {
+                      if (value.text.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return IconButton(
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          size: 18,
+                          color: _textSecondary,
+                        ),
+                        onPressed: () => _recipientController.clear(),
+                      );
+                    },
+                  ),
                 ),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14)),
               ),
             ),
+
             const SizedBox(height: 24),
 
-            // 5. Mood Selector
-            Row(
-              children: [
-                const Text('Mood / อารมณ์ความรู้สึก',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'ไม่บังคับ',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.amber.shade800,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+            // ======================================================
+            // Mood
+            // ======================================================
+            const _SectionTitle(
+              icon: Icons.mood_outlined,
+              title: 'Mood / อารมณ์ความรู้สึก',
+              optional: true,
             ),
-            const SizedBox(height: 6),
-            Text(
+
+            const SizedBox(height: 8),
+
+            const Text(
               'เลือกอารมณ์ของคุณในขณะบันทึกความทรงจำนี้',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              style: TextStyle(color: _textSecondary, fontSize: 13),
             ),
-            const SizedBox(height: 10),
+
+            const SizedBox(height: 12),
+
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _moodOptions.map((mood) {
                 final moodValue = '${mood['emoji']} ${mood['label']}';
                 final isSelected = _selectedMood == moodValue;
+
                 return ChoiceChip(
                   label: Text(moodValue),
                   selected: isSelected,
@@ -337,179 +457,388 @@ class _CreatePageState extends State<CreatePage> {
                       _selectedMood = selected ? moodValue : null;
                     });
                   },
-                  selectedColor: theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  selectedColor: _purple.withValues(alpha: 0.22),
+                  backgroundColor: _surface,
+                  side: BorderSide(
                     color: isSelected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface,
+                        ? _purple
+                        : Colors.white.withValues(alpha: 0.10),
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: isSelected
-                          ? theme.colorScheme.primary
-                          : Colors.grey.shade300,
-                    ),
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  labelStyle: TextStyle(
+                    color: isSelected ? _purpleLight : _textSecondary,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                  checkmarkColor: _purpleLight,
                 );
               }).toList(),
             ),
+
             const SizedBox(height: 24),
 
-            // 6. Image attachment / preview
-            Row(
-              children: [
-                const Text('รูปภาพแนบ (Image Attachment)',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'ไม่บังคับ',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.purple.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+            // ======================================================
+            // Image
+            // ======================================================
+            const _SectionTitle(
+              icon: Icons.image_outlined,
+              title: 'รูปภาพแนบ',
+              optional: true,
             ),
-            const SizedBox(height: 6),
-            Text(
+
+            const SizedBox(height: 8),
+
+            const Text(
               'แนบรูปถ่ายแห่งความทรงจำที่จะเปิดดูในอนาคต',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              style: TextStyle(color: _textSecondary, fontSize: 13),
             ),
-            const SizedBox(height: 10),
+
+            const SizedBox(height: 12),
+
             if (_selectedImageBytes == null)
               InkWell(
                 onTap: _pickImage,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.grey.shade400,
-                      style: BorderStyle.solid,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    color: Colors.grey.shade50,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 30,
+                    horizontal: 16,
                   ),
-                  child: Column(
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _purple.withValues(alpha: 0.25)),
+                  ),
+                  child: const Column(
                     children: [
-                      Icon(
-                        Icons.add_photo_alternate_outlined,
-                        size: 40,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(height: 8),
+                      _ImageUploadIcon(),
+                      SizedBox(height: 12),
                       Text(
                         'แตะเพื่อเลือกรูปภาพจากเครื่อง',
                         style: TextStyle(
+                          color: _purpleLight,
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 5),
                       Text(
                         'รองรับไฟล์ JPG, PNG, WEBP',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
+                        style: TextStyle(color: _textSecondary, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
               )
             else
-              Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.memory(
-                        _selectedImageBytes!,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Material(
-                      color: Colors.black54,
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                        tooltip: 'ลบรูปภาพ',
-                        onPressed: _removeImage,
-                      ),
-                    ),
-                  ),
-                  if (_selectedImageName != null)
-                    Positioned(
-                      bottom: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _selectedImageName!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                ],
+              _ImagePreview(
+                imageBytes: _selectedImageBytes!,
+                imageName: _selectedImageName,
+                onRemove: _removeImage,
               ),
-            const SizedBox(height: 32),
 
-            // 7. Create button
+            const SizedBox(height: 30),
+
+            // ======================================================
+            // Create Button
+            // ======================================================
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 56,
               child: ElevatedButton.icon(
                 onPressed: _isLoading ? null : _createCapsule,
                 icon: _isLoading
                     ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        width: 19,
+                        height: 19,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : const Icon(Icons.lock_outline),
+                    : const Icon(Icons.lock_outline_rounded),
                 label: Text(
                   _isLoading
                       ? 'กำลังบันทึกและอัปโหลด...'
                       : 'Create Time Capsule',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _purple,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: _purple.withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.white54,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  elevation: 0,
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String hintText,
+    required IconData prefixIcon,
+    Widget? suffixIcon,
+    bool alignLabelWithHint = false,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(color: _textSecondary, fontSize: 14),
+      prefixIcon: Icon(prefixIcon, color: _purpleLight, size: 21),
+      suffixIcon: suffixIcon,
+      alignLabelWithHint: alignLabelWithHint,
+      filled: true,
+      fillColor: _surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _purple, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
+}
+
+// ================================================================
+// Header Icon
+// ================================================================
+
+class _HeaderIcon extends StatelessWidget {
+  const _HeaderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        color: _CreatePageState._purple.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: _CreatePageState._purple.withValues(alpha: 0.25),
+        ),
+      ),
+      child: const Icon(
+        Icons.lock_clock_rounded,
+        color: _CreatePageState._purpleLight,
+        size: 30,
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Section Title
+// ================================================================
+
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool optional;
+
+  const _SectionTitle({
+    required this.icon,
+    required this.title,
+    this.optional = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: _CreatePageState._purple.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: _CreatePageState._purpleLight, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            color: _CreatePageState._textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        if (optional) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'ไม่บังคับ',
+              style: TextStyle(
+                color: _CreatePageState._textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ================================================================
+// Field Container
+// ================================================================
+
+class _FieldContainer extends StatelessWidget {
+  final Widget child;
+
+  const _FieldContainer({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+// ================================================================
+// Image Upload Icon
+// ================================================================
+
+class _ImageUploadIcon extends StatelessWidget {
+  const _ImageUploadIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 62,
+      height: 62,
+      decoration: BoxDecoration(
+        color: _CreatePageState._purple.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Icons.add_photo_alternate_outlined,
+        size: 30,
+        color: _CreatePageState._purpleLight,
+      ),
+    );
+  }
+}
+
+// ================================================================
+// Image Preview
+// ================================================================
+
+class _ImagePreview extends StatelessWidget {
+  final Uint8List imageBytes;
+  final String? imageName;
+  final VoidCallback onRemove;
+
+  const _ImagePreview({
+    required this.imageBytes,
+    required this.imageName,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _CreatePageState._surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: _CreatePageState._purple.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: Image.memory(
+              imageBytes,
+              width: double.infinity,
+              height: 220,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.65),
+              shape: const CircleBorder(),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                tooltip: 'ลบรูปภาพ',
+                onPressed: onRemove,
+              ),
+            ),
+          ),
+
+          if (imageName != null)
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  imageName!,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

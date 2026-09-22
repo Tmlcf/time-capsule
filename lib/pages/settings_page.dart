@@ -11,26 +11,51 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  // toggle states (UI only สำหรับ notification/privacy — ยังไม่ต่อ backend)
   bool _notificationsEnabled = true;
   bool _privateProfile = false;
+
+  static const Color _background = Color(0xFF0B0B1E);
+  static const Color _surface = Color(0xFF15152B);
+  static const Color _purple = Color(0xFF651FFF);
+  static const Color _purpleLight = Color(0xFF9D7CFF);
+  static const Color _textPrimary = Colors.white;
+  static const Color _textSecondary = Color(0xFFA8A7C0);
 
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('ออกจากระบบ'),
-        content: const Text('คุณต้องการออกจากระบบใช่ไหม?'),
+        backgroundColor: _surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'ออกจากระบบ',
+          style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'คุณต้องการออกจากระบบใช่ไหม?',
+          style: TextStyle(color: _textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
+            child: const Text(
+              'ยกเลิก',
+              style: TextStyle(color: _textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('ออกจากระบบ',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB3263E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'ออกจากระบบ',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -41,11 +66,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     try {
       final authService = ref.read(authServiceProvider);
       await authService.signOut();
-      if (mounted) context.go('/login');
+
+      if (mounted) {
+        context.go('/login');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ออกจากระบบไม่สำเร็จ: $e')),
+          SnackBar(
+            content: Text('ออกจากระบบไม่สำเร็จ: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -53,150 +84,411 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // อ่านค่า themeMode จาก provider
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == ThemeMode.dark ||
+
+    final isDark =
+        themeMode == ThemeMode.dark ||
         (themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('ตั้งค่า'),
+        backgroundColor: _background,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded, color: _textPrimary),
           onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: _textPrimary,
+            fontSize: 23,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          // ============ หมวด: การแสดงผล ============
-          _SectionHeader(title: 'การแสดงผล'),
-
-          SwitchListTile(
-            secondary: Icon(
-              isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-              color: colorScheme.primary,
-            ),
-            title: const Text('โหมดกลางคืน (Dark Mode)'),
-            subtitle: Text(isDark ? 'เปิดอยู่' : 'ปิดอยู่'),
-            value: isDark,
-            onChanged: (val) {
-              if (val) {
-                ref.read(themeModeProvider.notifier).setDark();
-              } else {
-                ref.read(themeModeProvider.notifier).setLight();
-              }
-            },
-          ),
-
-          const Divider(height: 1),
-
-          // ============ หมวด: การแจ้งเตือน ============
-          _SectionHeader(title: 'การแจ้งเตือน'),
-
-          SwitchListTile(
-            secondary: Icon(Icons.notifications_outlined,
-                color: colorScheme.primary),
-            title: const Text('รับการแจ้งเตือน'),
-            subtitle: Text(_notificationsEnabled ? 'เปิดอยู่' : 'ปิดอยู่'),
-            value: _notificationsEnabled,
-            onChanged: (val) {
-              setState(() => _notificationsEnabled = val);
-              // TODO: เชื่อมต่อ backend ตอน Person 4 ทำ Notification
-            },
-          ),
-
-          const Divider(height: 1),
-
-          // ============ หมวด: ความเป็นส่วนตัว ============
-          _SectionHeader(title: 'ความเป็นส่วนตัว'),
-
-          SwitchListTile(
-            secondary:
-                Icon(Icons.lock_outline, color: colorScheme.primary),
-            title: const Text('โปรไฟล์ส่วนตัว'),
-            subtitle: const Text('ซ่อนโปรไฟล์จากผู้ใช้อื่น'),
-            value: _privateProfile,
-            onChanged: (val) {
-              setState(() => _privateProfile = val);
-              // TODO: เชื่อมต่อ backend ตอน Person 4 ทำ Friend Capsule
-            },
-          ),
-
-          const Divider(height: 1),
-
-          // ============ หมวด: บัญชี ============
-          _SectionHeader(title: 'บัญชี'),
-
-          ListTile(
-            leading: Icon(Icons.person_outline, color: colorScheme.primary),
-            title: const Text('ดูโปรไฟล์'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              context.pop(); // กลับ Profile page
-            },
-          ),
-
-          const Divider(height: 1),
-
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('ออกจากระบบ',
-                style: TextStyle(color: Colors.red)),
-            onTap: _logout,
-          ),
-
-          const Divider(height: 1),
-
-          // ============ App Version ============
+          _buildHeader(),
           const SizedBox(height: 24),
-          Center(
-            child: Text(
-              'Time Capsule v1.0.0',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 12,
+
+          // Display
+          const _SectionHeader(
+            title: 'การแสดงผล',
+            icon: Icons.palette_outlined,
+          ),
+          const SizedBox(height: 10),
+          _SettingsCard(
+            children: [
+              _SettingSwitchTile(
+                icon: isDark
+                    ? Icons.dark_mode_outlined
+                    : Icons.light_mode_outlined,
+                title: 'โหมดกลางคืน',
+                subtitle: isDark ? 'เปิดใช้งานอยู่' : 'ปิดใช้งานอยู่',
+                value: isDark,
+                onChanged: (value) {
+                  if (value) {
+                    ref.read(themeModeProvider.notifier).setDark();
+                  } else {
+                    ref.read(themeModeProvider.notifier).setLight();
+                  }
+                },
               ),
+            ],
+          ),
+
+          // Notifications
+          const _SectionHeader(
+            title: 'การแจ้งเตือน',
+            icon: Icons.notifications_none_rounded,
+          ),
+          const SizedBox(height: 10),
+          _SettingsCard(
+            children: [
+              _SettingSwitchTile(
+                icon: Icons.notifications_none_rounded,
+                title: 'รับการแจ้งเตือน',
+                subtitle: _notificationsEnabled
+                    ? 'เปิดใช้งานอยู่'
+                    : 'ปิดใช้งานอยู่',
+                value: _notificationsEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    _notificationsEnabled = value;
+                  });
+
+                  // TODO: เชื่อมต่อ backend ตอน Person 4 ทำ Notification
+                },
+              ),
+            ],
+          ),
+
+          // Privacy
+          const _SectionHeader(
+            title: 'ความเป็นส่วนตัว',
+            icon: Icons.shield_outlined,
+          ),
+          const SizedBox(height: 10),
+          _SettingsCard(
+            children: [
+              _SettingSwitchTile(
+                icon: Icons.lock_outline_rounded,
+                title: 'โปรไฟล์ส่วนตัว',
+                subtitle: 'ซ่อนโปรไฟล์จากผู้ใช้อื่น',
+                value: _privateProfile,
+                onChanged: (value) {
+                  setState(() {
+                    _privateProfile = value;
+                  });
+
+                  // TODO: เชื่อมต่อ backend ตอน Person 4 ทำ Friend Capsule
+                },
+              ),
+            ],
+          ),
+
+          // Account
+          const _SectionHeader(
+            title: 'บัญชี',
+            icon: Icons.person_outline_rounded,
+          ),
+          const SizedBox(height: 10),
+          _SettingsCard(
+            children: [
+              _SettingActionTile(
+                icon: Icons.person_outline_rounded,
+                title: 'ดูโปรไฟล์',
+                subtitle: 'ดูข้อมูลบัญชีของคุณ',
+                onTap: () => context.pop(),
+              ),
+              const _SettingsDivider(),
+              _SettingActionTile(
+                icon: Icons.logout_rounded,
+                title: 'ออกจากระบบ',
+                subtitle: 'ออกจากบัญชี Time Capsule',
+                iconColor: Color(0xFFFF5C70),
+                titleColor: Color(0xFFFF6B7D),
+                onTap: _logout,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 36),
+
+          // App info
+          _buildAppInfo(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF20104A), Color(0xFF15152B)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _purple.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: _purple.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: const Icon(
+              Icons.settings_rounded,
+              color: _purpleLight,
+              size: 28,
             ),
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'สร้างด้วย ❤️ โดย Group Project',
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 11,
-              ),
+          const SizedBox(width: 15),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ปรับแต่งแอปของคุณ',
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'จัดการการแสดงผล การแจ้งเตือน และบัญชี',
+                  style: TextStyle(
+                    color: _textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppInfo() {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [_purple, _purpleLight]),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: const Icon(
+            Icons.hourglass_bottom_rounded,
+            color: Colors.white,
+            size: 25,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Time Capsule',
+          style: TextStyle(
+            color: _textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Version 1.0.0',
+          style: TextStyle(color: _textSecondary, fontSize: 11),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'สร้างด้วย ❤️ โดย Group Project',
+          style: TextStyle(color: Color(0xFF77768F), fontSize: 11),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final IconData icon;
+
+  const _SectionHeader({required this.title, required this.icon});
+
+  static const Color purpleLight = Color(0xFF9D7CFF);
+  static const Color textSecondary = Color(0xFFA8A7C0);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, top: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: purpleLight),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ============ Widget ย่อย: หัวข้อหมวด ============
-class _SectionHeader extends StatelessWidget {
-  final String title;
+class _SettingsCard extends StatelessWidget {
+  final List<Widget> children;
 
-  const _SectionHeader({required this.title});
+  const _SettingsCard({required this.children});
+
+  static const Color surface = Color(0xFF15152B);
+  static const Color purple = Color(0xFF651FFF);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Text(
+    return Container(
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: purple.withValues(alpha: 0.16)),
+      ),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _SettingSwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  static const Color purple = Color(0xFF651FFF);
+  static const Color purpleLight = Color(0xFF9D7CFF);
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Color(0xFFA8A7C0);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: purple.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Icon(icon, color: purpleLight, size: 21),
+      ),
+      title: Text(
         title,
-        style: TextStyle(
-          fontSize: 12,
+        style: const TextStyle(
+          color: textPrimary,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.primary,
-          letterSpacing: 0.5,
         ),
       ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(
+          subtitle,
+          style: const TextStyle(color: textSecondary, fontSize: 11),
+        ),
+      ),
+      trailing: Switch.adaptive(
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: purple,
+        activeThumbColor: Colors.white,
+      ),
+    );
+  }
+}
+
+class _SettingActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color iconColor;
+  final Color titleColor;
+  final VoidCallback onTap;
+
+  const _SettingActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.iconColor = const Color(0xFF9D7CFF),
+    this.titleColor = Colors.white,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: Icon(icon, color: iconColor, size: 24),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: titleColor,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(
+          subtitle,
+          style: const TextStyle(color: Color(0xFFA8A7C0), fontSize: 11),
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: Color(0xFF77768F),
+        size: 15,
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+class _SettingsDivider extends StatelessWidget {
+  const _SettingsDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(left: 58),
+      child: Divider(height: 1, color: Color(0xFF2A2A45)),
     );
   }
 }
