@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:time_capsule/models/capsule.dart';
@@ -24,8 +22,7 @@ class CapsuleService {
     final user = _getRequiredUser();
     final userId = user.id;
 
-    final cleanFileName =
-        fileName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+    final cleanFileName = fileName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
 
     final storagePath =
         '$userId/${DateTime.now().millisecondsSinceEpoch}_$cleanFileName';
@@ -42,18 +39,15 @@ class CapsuleService {
       mimeType = 'image/gif';
     }
 
-    await _supabase.storage.from('capsule-images').uploadBinary(
-      storagePath,
-      bytes,
-      fileOptions: FileOptions(
-        contentType: mimeType,
-        upsert: true,
-      ),
-    );
-
-    return _supabase.storage
+    await _supabase.storage
         .from('capsule-images')
-        .getPublicUrl(storagePath);
+        .uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(contentType: mimeType, upsert: true),
+        );
+
+    return _supabase.storage.from('capsule-images').getPublicUrl(storagePath);
   }
 
   Future<String> getSignedUrl(
@@ -80,10 +74,7 @@ class CapsuleService {
     String? imageUrl;
 
     if (imageBytes != null && imageFileName != null) {
-      imageUrl = await uploadImage(
-        bytes: imageBytes,
-        fileName: imageFileName,
-      );
+      imageUrl = await uploadImage(bytes: imageBytes, fileName: imageFileName);
     }
 
     await _supabase.from('capsules').insert({
