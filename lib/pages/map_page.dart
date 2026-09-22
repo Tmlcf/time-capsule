@@ -56,7 +56,9 @@ class _MapPageState extends State<MapPage> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       final newLocation = LatLng(position.latitude, position.longitude);
@@ -122,7 +124,6 @@ class _MapPageState extends State<MapPage> {
               // เช่น: MarkerLayer(markers: capsules.map((c) => Marker(...)).toList()),
             ],
           ),
-
           if (_errorMessage != null)
             Positioned(
               top: 16,
@@ -131,7 +132,7 @@ class _MapPageState extends State<MapPage> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.9),
+                  color: Colors.red.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -140,7 +141,6 @@ class _MapPageState extends State<MapPage> {
                 ),
               ),
             ),
-
           Positioned(
             bottom: 24,
             left: 24,
