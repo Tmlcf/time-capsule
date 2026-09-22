@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:time_capsule/models/capsule.dart';
 import 'package:time_capsule/services/capsule_service.dart';
 
 class CreatePage extends StatefulWidget {
@@ -52,6 +53,7 @@ class _CreatePageState extends State<CreatePage> {
       await _capsuleService.createCapsule(
         title: _titleController.text.trim(),
         message: _messageController.text.trim(),
+        type: CapsuleType.time,
         openDate: _openDate!,
       );
 
